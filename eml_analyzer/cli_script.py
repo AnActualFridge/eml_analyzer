@@ -143,8 +143,6 @@ def _get_output_path_for_attachment(attachment: Attachment, output_path: str or 
     elif os.path.isdir(output_path):
         return os.path.join(output_path, attachment.filename)
 
-
-def _extract_all_attachments(parsed_email: Parsed
 def _extract_all_attachments(parsed_email: ParsedEmail, path: str or None):
     print_headline_banner('Attachment Extraction')
 
