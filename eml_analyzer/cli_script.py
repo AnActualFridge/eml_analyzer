@@ -19,7 +19,7 @@ def main():
     argument_parser.add_argument('-s', '--structure', action='store_true', default=False, help="Shows structure of the E-Mail")
     argument_parser.add_argument('-u', '--url', action='store_true', default=False, help="Shows embedded clickable links and urls in the HTML and text part")
     argument_parser.add_argument('-ea', '--extract', type=int, default=None, help="Extracts the x-th attachment. Can not be used together with the '--format' parameter.")
-    argument_parser.add_argument('--extract-all', action='store_true', default=None, help="Extracts all attachments. If a output format is specified the content of the attachments will be included in the structural output as a base64 encoded blob")
+    argument_parser.add_argument('--extract-all', action='store_true', default=None, help="Extracts all attachments. If an output format is specified, the content of the attachments will be included in the structural output as a base64 encoded blob")
     argument_parser.add_argument('-o', '--output', type=str, default=None, help="Path for the extracted attachment (default is filename in working directory)")
     argument_parser.add_argument('--format', default='', const='', nargs='?', choices=['json'], help='Specifies a structured output format, the default format is not machine-readable')
     arguments = argument_parser.parse_args()
@@ -55,7 +55,7 @@ def main():
     if arguments.structure:
         output_format.process_option_show_structure(parsed_email=parsed_email)
     if arguments.url:
-        output_format.process_option_show_embedded_urls_in_html_and_text(parsed_email=parsed_email)
+        output_format.process_option_show_embedded_urls_in_html_and_text(parsed_email=parsed_email
     if arguments.tracking:
         output_format.process_option_show_reloaded_content_from_html(parsed_email=parsed_email)
     if arguments.attachments:
@@ -101,7 +101,7 @@ def _parse_eml_file_or_exit_on_error(output_format: AbstractOutput, eml_content:
     try:
         return ParsedEmail(eml_content=eml_content)
     except EmlParsingException as e:
-        output_format.output_error_and_exit(exception=e, error_message='File could not be parsed. Sure it is an eml file?')
+        output_format.output_error_and_exit(exception=e, error_message='File could not be parsed. Make sure it is an EML file.')
 
 
 def _extract_attachment(parsed_email: ParsedEmail, attachment_number: int, output_path: str or None):
@@ -120,8 +120,7 @@ def _extract_attachment(parsed_email: ParsedEmail, attachment_number: int, outpu
 
 
 def _get_attachment_by_index(parsed_email: ParsedEmail, attachment_number: int) -> Attachment or None:
-    attachments = parsed_email.get_attachments()
-    for attachment in attachments:
+    for attachment in parsed_email.get_attachments():
         if attachment.index == attachment_number:
             return attachment
     return None
@@ -130,8 +129,11 @@ def _get_attachment_by_index(parsed_email: ParsedEmail, attachment_number: int) 
 def _write_attachment_to_file(attachment: Attachment, output_path: str or None) -> None:
     output_path = _get_output_path_for_attachment(attachment=attachment, output_path=output_path)
 
-    output_file = open(output_path, mode='wb')
-    output_file.write(attachment.content)
+    with open(output_path, mode='wb') as output_file:
+        chunk_size = 8192
+        for chunk in attachment.iter_content(chunk_size=chunk_size):
+            output_file.write(chunk)
+
     info('Attachment [{}] "{}" extracted to {}'.format(attachment.index, attachment.filename, output_path))
 
 
@@ -142,17 +144,16 @@ def _get_output_path_for_attachment(attachment: Attachment, output_path: str or 
         return os.path.join(output_path, attachment.filename)
 
 
+def _extract_all_attachments(parsed_email: Parsed
 def _extract_all_attachments(parsed_email: ParsedEmail, path: str or None):
-    print_headline_banner('Extracting All Attachments')
+    print_headline_banner('Attachment Extraction')
 
-    # if no output directory is given then a default directory with the name 'eml_attachments' is used
-    if path is None:
-        path = 'eml_attachments'
+    attachments = parsed_email.get_attachments()
+    if not attachments:
+        info('No attachments found')
+        return
 
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    for attachment in parsed_email.get_attachments():
+    for attachment in attachments:
         _write_attachment_to_file(attachment=attachment, output_path=path)
 
 
